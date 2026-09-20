@@ -1,0 +1,6 @@
+node_modules/
+data/*.db
+certs/*.pem
+certs/*.p12
+certs/*.cer
+.env

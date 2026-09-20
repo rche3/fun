@@ -1,0 +1,23 @@
+{
+  "name": "nfc-loyalty",
+  "version": "0.1.0",
+  "description": "Tap an NFC chip -> add a stamp to an Apple Wallet loyalty card. Lightweight, from-scratch.",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "dependencies": {
+    "@parse/node-apn": "^6.0.1",
+    "better-sqlite3": "^11.3.0",
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "morgan": "^1.10.0",
+    "passkit-generator": "^3.3.0",
+    "sharp": "^0.33.5"
+  }
+}
