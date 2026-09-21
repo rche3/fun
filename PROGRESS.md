@@ -7,13 +7,11 @@ task (see `CLAUDE.md`).
 
 - **shanghai/**: Live at https://shanghai.up.railway.app (Railway project
   `delightful-tranquility`, service `fun`; every push to `main` redeploys).
-  The 2026-09-21 redesign is **built and checked locally but not yet
-  committed or pushed**, waiting on Roger's go-ahead.
+  The 2026-09-21 redesign is live (`1643001`).
 - **archive/nfc-loyalty/**: Archived. Nothing to do.
 
 ## Next up / open questions
 
-- Push the redesign live when Roger says so.
 - **Roger is adding 10 photos himself** from Xiaohongshu and similar. Filenames
   go in `shanghai/photos/`: bing-cheng, fei-da-chu, four-seasons, banu,
   haidilao, lao-ji-shi, flair, conde, two-itc, the-louis (`.jpg`). Shrink with
