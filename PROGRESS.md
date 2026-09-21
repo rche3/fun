@@ -5,14 +5,16 @@ task (see `CLAUDE.md`).
 
 ## Current state
 
-- **shanghai/**: **Live at https://fun-production-5f58.up.railway.app.** Railway
+- **shanghai/**: **Live at https://shanghai.up.railway.app.** Railway
   project `delightful-tranquility`, service `fun`, auto-deploys on every push to
   `main` of `rche3/fun`. All work is committed (`cb05dfe`).
 - **archive/nfc-loyalty/**: Archived. Nothing to do.
 
 ## Next up / open questions
 
-- Nothing pending. Possible next steps: a custom domain, rename the Railway
+- Nothing pending. Possible next steps: buy a domain (`rogerchen.app`,
+  `rche.app` and `rchen.app` were unregistered on 2026-09-21) for
+  `shanghai.<domain>`, rename the Railway
   project and service to something clearer than `delightful-tranquility` / `fun`,
   or double-check the place coordinates on a phone.
 - If another project in this repo needs Railway, it needs its **own service**
@@ -21,6 +23,8 @@ task (see `CLAUDE.md`).
 ## Log
 
 ### 2026-09-21
+- Renamed the Railway link from `fun-production-5f58.up.railway.app` to
+  `shanghai.up.railway.app`. The old URL now returns 404.
 - Deployed `shanghai/` to Railway. Set the service's Root Directory to
   `/shanghai`, with build `python3 build_map.py` and start `python3 server.py`,
   via the Railway API. Removed `railway.json` because Railway deprecated config

@@ -22,7 +22,7 @@ No dependencies. `requirements.txt` is intentionally empty.
 
 ## Deploy to Railway
 
-Live on Railway: project `delightful-tranquility`, service `fun`, connected to
+Live at https://shanghai.up.railway.app. Railway project `delightful-tranquility`, service `fun`, connected to
 the `rche3/fun` GitHub repo. **Every push to `main` redeploys.**
 
 The service settings (set in the Railway dashboard, not in a file):
