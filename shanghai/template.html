@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=5">
+<meta name="theme-color" content="#fcfcfb" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#161615" media="(prefers-color-scheme: dark)">
+<meta name="description" content="Shanghai 上海 — __TRIP__.">
+<title>Shanghai 上海</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<style>
+:root {
+  color-scheme: light;
+  --surface: #fcfcfb;
+  --surface-2: #ffffff;
+  --line: #e4e3df;
+  --ink: #17171a;
+  --ink-2: #52514e;
+  --ink-3: #85837c;
+  --shadow: 0 -2px 24px rgba(20,20,18,.13);
+  --hotel: #d93a2f;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --surface: #161615;
+    --surface-2: #1f1f1e;
+    --line: #333331;
+    --ink: #f5f4f0;
+    --ink-2: #c3c2b7;
+    --ink-3: #8e8d85;
+    --shadow: 0 -2px 28px rgba(0,0,0,.55);
+    --hotel: #e5483c;
+  }
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  background: var(--surface);
+  color: var(--ink);
+  font: 15px/1.5 ui-sans-serif, -apple-system, "SF Pro Text", "PingFang SC",
+        "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+#app { position: fixed; inset: 0; display: flex; flex-direction: column; }
+#main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+
+/* ---- header ---- */
+header {
+  flex: none;
+  padding: max(10px, env(safe-area-inset-top)) 0 8px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  z-index: 500;
+}
+.title { padding: 0 16px 8px; }
+.title h1 { font-size: 19px; font-weight: 680; letter-spacing: -.01em; margin: 0; line-height: 1.25; }
+.title h1 .zh { font-weight: 600; margin-left: 4px; }
+.title .sub { font-size: 12.5px; color: var(--ink-3); }
+.chips {
+  display: flex; gap: 6px; padding: 0 12px;
+  overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+}
+.chips + .chips { margin-top: 6px; }
+.chips::-webkit-scrollbar { display: none; }
+.chip {
+  flex: none; display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px;
+  background: var(--surface-2); color: var(--ink-2);
+  font: inherit; font-size: 13px; font-weight: 520; white-space: nowrap;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+  transition: background .13s, color .13s, border-color .13s;
+}
+.chip .dot { width: 9px; height: 9px; border-radius: 50%; }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.chip[aria-pressed="true"] .dot { box-shadow: 0 0 0 1.5px var(--surface); }
+
+/* ---- map ---- */
+#map { flex: 1; min-height: 0; background: var(--surface-2); }
+.leaflet-container { font: inherit; background: var(--surface-2); }
+.leaflet-tile-pane { filter: grayscale(1) brightness(1.06) contrast(.88); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .leaflet-tile-pane {
+    filter: grayscale(1) invert(1) brightness(.9) contrast(.85);
+  }
+}
+.leaflet-control-attribution { font-size: 10px; background: rgba(252,252,251,.78) !important; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .leaflet-control-attribution {
+    background: rgba(22,22,21,.78) !important; color: #8e8d85;
+  }
+  :root:not([data-theme="light"]) .leaflet-control-attribution a { color: #a9a8a0; }
+}
+.leaflet-bar a {
+  background: var(--surface-2); color: var(--ink); border-bottom-color: var(--line);
+}
+
+.pin {
+  display: grid; place-items: center;
+  width: 28px; height: 28px; border-radius: 50%;
+  font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums;
+  box-shadow: 0 0 0 2px var(--surface), 0 1px 5px rgba(0,0,0,.35);
+  transition: transform .14s ease;
+}
+.pin.is-active { transform: scale(1.32); }
+.hotel-pin { filter: drop-shadow(0 2px 3px rgba(0,0,0,.35)); }
+.hotel-pin path { fill: var(--hotel); stroke: var(--surface); stroke-width: 2; }
+.hotel-pin text { fill: #fff; font: 700 13px ui-sans-serif, -apple-system, system-ui, sans-serif; }
+
+/* ---- bottom sheet ---- */
+#sheet {
+  flex: none; position: relative; z-index: 600;
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+  border-radius: 16px 16px 0 0;
+  box-shadow: var(--shadow);
+  /* leaves the map the larger half of the phone — tap the handle to collapse */
+  max-height: 48vh; display: flex; flex-direction: column;
+  transition: max-height .26s cubic-bezier(.3,.9,.3,1);
+}
+#sheet.collapsed { max-height: 30px; }
+.grab {
+  flex: none; height: 22px; cursor: pointer; position: relative;
+  -webkit-tap-highlight-color: transparent;
+}
+.grab::before {
+  content: ""; position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+  width: 36px; height: 4px; border-radius: 2px; background: var(--line);
+}
+#list {
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding: 0 12px calc(12px + env(safe-area-inset-bottom));
+}
+details { margin-bottom: 4px; }
+summary {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 4px 8px; cursor: pointer; list-style: none;
+  font-size: 15px; font-weight: 650;
+  -webkit-tap-highlight-color: transparent;
+}
+summary::-webkit-details-marker { display: none; }
+summary .n { color: var(--ink-3); font-weight: 500; font-size: 13px; font-variant-numeric: tabular-nums; }
+summary::after {
+  content: ""; margin-left: auto; width: 7px; height: 7px;
+  border-right: 2px solid var(--ink-3); border-bottom: 2px solid var(--ink-3);
+  transform: rotate(45deg) translate(-2px, -2px); transition: transform .18s;
+}
+details:not([open]) summary::after { transform: rotate(-45deg); }
+
+.card {
+  width: 100%; text-align: left; display: flex; align-items: center; gap: 11px;
+  padding: 9px 9px 9px 11px; margin-bottom: 6px;
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px;
+  color: inherit; font: inherit; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.card:active { transform: scale(.995); }
+.card .num {
+  flex: none; align-self: flex-start; display: grid; place-items: center;
+  width: 24px; height: 24px; border-radius: 50%; margin-top: 2px;
+  font-size: 11.5px; font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.card .body { flex: 1; min-width: 0; }
+.card h3 { margin: 0; font-size: 14.5px; font-weight: 600; letter-spacing: -.005em; line-height: 1.3; }
+.card .zh { color: var(--ink-3); font-size: 12px; margin: 1px 0 3px; }
+.card p { margin: 0; font-size: 13px; line-height: 1.4; color: var(--ink-2); }
+.card .zone { display: flex; align-items: center; gap: 5px; margin-top: 4px; font-size: 11.5px; color: var(--ink-3); }
+.card .zone i { width: 7px; height: 7px; border-radius: 50%; }
+.card .photo {
+  flex: none; width: 72px; height: 72px; border-radius: 9px;
+  object-fit: cover; background: var(--line);
+}
+
+/* ---- popup ---- */
+.leaflet-popup-content-wrapper {
+  background: var(--surface-2); color: var(--ink);
+  border-radius: 13px; box-shadow: 0 4px 22px rgba(0,0,0,.24);
+}
+.leaflet-popup-tip { background: var(--surface-2); }
+.leaflet-popup-content { margin: 13px 14px; width: 220px !important; font: inherit; }
+.leaflet-popup-content h3 { margin: 0; font-size: 14.5px; font-weight: 640; }
+.leaflet-popup-content .zh { color: var(--ink-3); font-size: 12.5px; margin: 1px 0 6px; }
+.leaflet-popup-content p { margin: 0 0 9px; font-size: 13px; color: var(--ink-2); }
+.leaflet-popup-content a.go {
+  display: inline-block; padding: 6px 11px; border-radius: 8px;
+  background: var(--ink); color: var(--surface);
+  font-size: 12.5px; font-weight: 560; text-decoration: none;
+}
+.leaflet-container a.leaflet-popup-close-button { color: var(--ink-3); }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+
+@media (min-width: 820px) {
+  #main { flex-direction: row; }
+  .title { display: flex; align-items: baseline; gap: 12px; }
+  .chips { padding: 0 16px; }
+  #sheet {
+    width: 400px; max-height: none; height: 100%;
+    border-radius: 0; border-top: none; border-left: 1px solid var(--line);
+    box-shadow: none; padding-top: 6px;
+  }
+  #sheet.collapsed { max-height: none; }
+  .grab { display: none; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="title">
+      <h1>Shanghai<span class="zh">上海</span></h1>
+      <div class="sub">__TRIP__</div>
+    </div>
+    <div class="chips" id="zones" role="group" aria-label="Filter by area"></div>
+    <div class="chips" id="cats" role="group" aria-label="Filter by category"></div>
+  </header>
+  <div id="main">
+    <div id="map"></div>
+    <section id="sheet" aria-label="Places">
+      <div class="grab" id="grab" role="button" tabindex="0" aria-label="Show or hide the list"
+           aria-expanded="true" aria-controls="list"></div>
+      <div id="list"></div>
+    </section>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+const ZONES = __ZONES__;
+const CATEGORIES = __CATEGORIES__;
+const HOTEL = __HOTEL__;
+const PLACES = __PLACES__;
+
+const dark = matchMedia('(prefers-color-scheme: dark)');
+const zc = z => ZONES[z][dark.matches ? 'dark' : 'light'];
+
+const map = L.map('map', { zoomControl: false, attributionControl: true })
+  .setView([31.2260, 121.4700], 12);
+L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+// Standard OSM tiles (keyless; CARTO/Esri either stamp "API KEY REQUIRED" or
+// have no labels in China), drained to greyscale by a CSS filter on the tile
+// pane so the map reads as plain white/grey with the labels kept.
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 19,
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+}).addTo(map);
+
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const amap = p => 'https://uri.amap.com/search?keyword=' +
+  encodeURIComponent(p.name_zh || p.name) + '&city=' + encodeURIComponent('上海');
+const popup = p =>
+  '<h3>' + esc(p.name) + '</h3>' +
+  '<div class="zh">' + esc(p.name_zh) + '</div>' +
+  '<p>' + esc(p.description) + '</p>' +
+  '<a class="go" href="' + amap(p) + '" target="_blank" rel="noopener">Open in 高德 ↗</a>';
+
+let active = null;           // currently selected place number
+let zone = 'all';            // 'all' | zone id
+let cat = 'all';             // 'all' | category id
+const closed = new Set();    // categories collapsed in the list
+const markers = {};
+
+/* ---------- markers ---------- */
+function pinIcon(p) {
+  return L.divIcon({
+    className: '', iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -15],
+    html: '<div class="pin" data-n="' + p.n + '" style="background:' + zc(p.zone) +
+      ';color:' + ZONES[p.zone].text + '">' + p.n + '</div>'
+  });
+}
+PLACES.forEach(p => {
+  const m = L.marker([p.lat, p.lng], { icon: pinIcon(p), keyboard: false, title: p.name });
+  m.bindPopup(popup(p), { closeButton: true, autoPanPadding: [24, 24] });
+  m.on('click', () => select(p.n, false));
+  markers[p.n] = m;
+});
+
+// The hotel: red map pin, always shown, drawn above the numbered pins.
+L.marker([HOTEL.lat, HOTEL.lng], {
+  icon: L.divIcon({
+    className: '', iconSize: [30, 40], iconAnchor: [15, 39], popupAnchor: [0, -36],
+    html: '<svg class="hotel-pin" width="30" height="40" viewBox="0 0 30 40" aria-hidden="true">' +
+      '<path d="M15 38C15 38 2 24 2 14.5a13 13 0 0 1 26 0C28 24 15 38 15 38z"/>' +
+      '<text x="15" y="19" text-anchor="middle">H</text></svg>'
+  }),
+  zIndexOffset: 1000, keyboard: false, title: HOTEL.name
+}).bindPopup(popup(HOTEL), { autoPanPadding: [24, 24] }).addTo(map);
+
+/* ---------- filtering ---------- */
+function visible() {
+  return PLACES.filter(p => (zone === 'all' || p.zone === zone) && (cat === 'all' || p.category === cat));
+}
+
+function card(p) {
+  const b = document.createElement('button');
+  b.className = 'card';
+  b.type = 'button';
+  b.innerHTML =
+    '<span class="num" style="background:' + zc(p.zone) + ';color:' + ZONES[p.zone].text + '">' + p.n + '</span>' +
+    '<span class="body"><h3>' + esc(p.name) + '</h3>' +
+    '<div class="zh">' + esc(p.name_zh) + '</div>' +
+    '<p>' + esc(p.description) + '</p>' +
+    '<span class="zone"><i style="background:' + zc(p.zone) + '"></i>' + esc(ZONES[p.zone].name) + '</span></span>' +
+    (p.photo ? '<img class="photo" src="photos/' + esc(p.photo) + '" alt="" loading="lazy">' : '<span class="photo"></span>');
+  b.addEventListener('click', () => select(p.n, true));
+  return b;
+}
+
+function render() {
+  const rows = visible();
+
+  Object.values(markers).forEach(m => map.removeLayer(m));
+  rows.forEach(p => markers[p.n].addTo(map));
+
+  const list = document.getElementById('list');
+  list.innerHTML = '';
+  Object.entries(CATEGORIES).forEach(([id, name]) => {
+    const inCat = rows.filter(p => p.category === id);
+    if (!inCat.length) return;
+    const d = document.createElement('details');
+    d.open = !closed.has(id);
+    d.innerHTML = '<summary>' + esc(name) + ' <span class="n">' + inCat.length + '</span></summary>';
+    d.addEventListener('toggle', () => d.open ? closed.delete(id) : closed.add(id));
+    inCat.forEach(p => d.appendChild(card(p)));
+    list.appendChild(d);
+  });
+
+  fit(rows);
+}
+
+function fit(rows) {
+  if (!rows.length) return;
+  // The map is a flex child between a header and a sheet, so Leaflet's cached
+  // size is stale until layout settles — fit against the wrong height and the
+  // markers land off-screen. Measure, fit, then do it once more after the
+  // sheet has taken its height.
+  const bounds = L.latLngBounds(rows.map(p => [p.lat, p.lng]));
+  const go = () => {
+    map.invalidateSize({ pan: false });
+    map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15, animate: false });
+  };
+  requestAnimationFrame(go);
+  setTimeout(go, 180);
+}
+
+/* ---------- selection ---------- */
+function select(n, fromList) {
+  active = n;
+  document.querySelectorAll('.pin').forEach(el =>
+    el.classList.toggle('is-active', +el.dataset.n === n));
+  const p = PLACES.find(x => x.n === n);
+  if (fromList) {
+    if (window.innerWidth < 820) collapse(true);
+    map.flyTo([p.lat, p.lng], Math.max(map.getZoom(), 15), { duration: .5 });
+    setTimeout(() => markers[n].openPopup(), 380);
+  }
+}
+
+/* ---------- sheet ---------- */
+function collapse(on) {
+  const sheet = document.getElementById('sheet');
+  sheet.classList.toggle('collapsed', on);
+  document.getElementById('grab').setAttribute('aria-expanded', String(!on));
+  setTimeout(() => {
+    map.invalidateSize({ pan: false });
+    if (active === null) fit(visible());
+  }, 280);
+}
+const grab = document.getElementById('grab');
+grab.addEventListener('click', () =>
+  collapse(!document.getElementById('sheet').classList.contains('collapsed')));
+grab.addEventListener('keydown', e => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); grab.click(); }
+});
+
+/* ---------- chips ---------- */
+function chipRow(el, options, get, set) {
+  options.forEach(([id, label, color]) => {
+    const b = document.createElement('button');
+    b.className = 'chip';
+    b.type = 'button';
+    b.setAttribute('aria-pressed', String(id === get()));
+    b.innerHTML = (color ? '<span class="dot" style="background:' + color(id) + '"></span>' : '') + esc(label);
+    b.addEventListener('click', () => {
+      set(id);
+      active = null;
+      [...el.children].forEach(c => c.setAttribute('aria-pressed', String(c === b)));
+      render();
+    });
+    el.appendChild(b);
+  });
+}
+chipRow(document.getElementById('zones'),
+  [['all', 'All areas']].concat(Object.entries(ZONES).map(([id, z]) => [id, z.short, zc])),
+  () => zone, v => { zone = v; });
+chipRow(document.getElementById('cats'),
+  [['all', 'All']].concat(Object.entries(CATEGORIES).map(([id, name]) => [id, name])),
+  () => cat, v => { cat = v; });
+
+render();
+
+const resettle = () => {
+  map.invalidateSize({ pan: false });
+  if (active === null) fit(visible());
+};
+window.addEventListener('load', resettle);
+window.addEventListener('resize', resettle);
+window.addEventListener('orientationchange', () => setTimeout(resettle, 260));
+dark.addEventListener('change', () => location.reload());
+
+window.__map = map;  // debug handle
+</script>
+</body>
+</html>

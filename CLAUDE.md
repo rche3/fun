@@ -27,7 +27,7 @@ experiments. Not one application. Each top-level directory stands on its own.
 
 | Path | What | Stack |
 | --- | --- | --- |
-| `shanghai/` | Mobile-first map of 18 Shanghai recommendations in 3 walkable zones, meant to deploy on Railway | Python stdlib + Leaflet (CDN), no deps |
+| `shanghai/` | Mobile-first map of Shanghai recommendations for Roger's 27 Sep 2026 trip, live at https://shanghai.up.railway.app | Python stdlib + Leaflet (CDN), no deps |
 | `archive/nfc-loyalty/` | Apple Wallet / NFC loyalty-card server (archived) | Node + SQLite |
 | `archive/nfc-loyalty-wallet-plan.md` | Design notes for the above | — |
 
@@ -45,11 +45,20 @@ installed in it. Nothing depends on it.
 
 ## shanghai/ specifics
 
-- `data.py` is the source of truth for the map (zones, categories, places as
+- `data.py` is the source of truth for the map (trip, zones, hotel, places as
   tuples). `recc.md` is the prose write-up, synced **by hand**, and nothing reads
   it at build time. If you change a place, change it in both.
-- `build_map.py` generates `public/index.html`. Never hand-edit
-  `public/index.html`; rebuild it.
+- **Descriptions are Roger's words, kept short.** One line, no added commentary,
+  tips or embellishment. He strongly dislikes padded descriptions. For an empty
+  one, write a few plain words.
+- Keep the UI minimal: no emojis, no subcategories, no filler text like counts
+  or taglines.
+- `template.html` is the page. `build_map.py` fills in the data, writes
+  `public/index.html` and copies `photos/` over. Never hand-edit `public/`.
+- Photos: `photos/<name>.jpg`, with the filename set in `data.py`. Landmarks come
+  from Wikimedia Commons, credited in `photos/CREDITS.md`. Restaurant photos come
+  from Roger (Xiaohongshu and similar need a login, which Claude can't do).
+  Shrink them with `sips -Z 480` before committing.
 - Run locally: `python3 build_map.py && python3 server.py` (port 8000, or set
   `PORT=8077` if 8000 is taken).
 - Deploy: Railway project `delightful-tranquility`, service `fun`, connected to
