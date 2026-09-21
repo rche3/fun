@@ -68,4 +68,7 @@ installed in it. Nothing depends on it.
   Railway has deprecated `railway.json`. `shanghai/` is `railway link`ed locally,
   so `railway logs` and `railway up` work from there.
 - `public/` is gitignored. Railway builds it on deploy.
+- After UI changes, run `node shanghai/tools/ux-test.mjs` against a local server
+  and look at the screenshots. Roger tests on an iPhone 17 Pro Max.
+- **Don't deploy without asking.** Roger reviews on localhost first.
 - Keep it dependency-free. `requirements.txt` is intentionally empty.

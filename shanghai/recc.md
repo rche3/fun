@@ -1,6 +1,6 @@
 # Shanghai 上海
 
-27 September 2026 trip.
+September 2026 Trip.
 
 - Hotel: Grand Hyatt Shanghai 上海金茂君悦大酒店 (Jin Mao Tower, Lujiazui)
 

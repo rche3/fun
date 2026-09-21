@@ -3,12 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=5">
-<meta name="theme-color" content="#fcfcfb" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#161615" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#fcfcfb">
+<meta name="color-scheme" content="light">
 <meta name="description" content="Shanghai 上海 — __TRIP__.">
 <title>Shanghai 上海</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
 <style>
 :root {
   color-scheme: light;
@@ -20,19 +21,6 @@
   --ink-3: #85837c;
   --shadow: 0 -2px 24px rgba(20,20,18,.13);
   --hotel: #d93a2f;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    color-scheme: dark;
-    --surface: #161615;
-    --surface-2: #1f1f1e;
-    --line: #333331;
-    --ink: #f5f4f0;
-    --ink-2: #c3c2b7;
-    --ink-3: #8e8d85;
-    --shadow: 0 -2px 28px rgba(0,0,0,.55);
-    --hotel: #e5483c;
-  }
 }
 
 * { box-sizing: border-box; }
@@ -56,7 +44,7 @@ header {
   border-bottom: 1px solid var(--line);
   z-index: 500;
 }
-.title { padding: 0 16px 8px; }
+.title { padding: 0 16px 8px; display: flex; align-items: baseline; flex-wrap: wrap; column-gap: 10px; }
 .title h1 { font-size: 19px; font-weight: 680; letter-spacing: -.01em; margin: 0; line-height: 1.25; }
 .title h1 .zh { font-weight: 600; margin-left: 4px; }
 .title .sub { font-size: 12.5px; color: var(--ink-3); }
@@ -64,7 +52,8 @@ header {
   display: flex; gap: 6px; padding: 0 12px;
   overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
 }
-.chips + .chips { margin-top: 6px; }
+/* area chips wrap rather than hide Jing'an off the edge of a phone */
+#zones { flex-wrap: wrap; row-gap: 6px; overflow: visible; }
 .chips::-webkit-scrollbar { display: none; }
 .chip {
   flex: none; display: inline-flex; align-items: center; gap: 6px;
@@ -77,23 +66,12 @@ header {
 .chip .dot { width: 9px; height: 9px; border-radius: 50%; }
 .chip[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
 .chip[aria-pressed="true"] .dot { box-shadow: 0 0 0 1.5px var(--surface); }
+.chip.hotel svg { width: 11px; height: 14px; }
 
 /* ---- map ---- */
 #map { flex: 1; min-height: 0; background: var(--surface-2); }
 .leaflet-container { font: inherit; background: var(--surface-2); }
-.leaflet-tile-pane { filter: grayscale(1) brightness(1.06) contrast(.88); }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .leaflet-tile-pane {
-    filter: grayscale(1) invert(1) brightness(.9) contrast(.85);
-  }
-}
 .leaflet-control-attribution { font-size: 10px; background: rgba(252,252,251,.78) !important; }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .leaflet-control-attribution {
-    background: rgba(22,22,21,.78) !important; color: #8e8d85;
-  }
-  :root:not([data-theme="light"]) .leaflet-control-attribution a { color: #a9a8a0; }
-}
 .leaflet-bar a {
   background: var(--surface-2); color: var(--ink); border-bottom-color: var(--line);
 }
@@ -106,9 +84,9 @@ header {
   transition: transform .14s ease;
 }
 .pin.is-active { transform: scale(1.32); }
-.hotel-pin { filter: drop-shadow(0 2px 3px rgba(0,0,0,.35)); }
-.hotel-pin path { fill: var(--hotel); stroke: var(--surface); stroke-width: 2; }
-.hotel-pin text { fill: #fff; font: 700 13px ui-sans-serif, -apple-system, system-ui, sans-serif; }
+.hotel-pin { overflow: visible; filter: drop-shadow(0 3px 3px rgba(0,0,0,.3)); }
+.hotel-pin .body { fill: var(--hotel); stroke: #a8231b; stroke-width: 1; }
+.hotel-pin .bed { fill: #fff; }
 
 /* ---- bottom sheet ---- */
 #sheet {
@@ -117,19 +95,27 @@ header {
   border-top: 1px solid var(--line);
   border-radius: 16px 16px 0 0;
   box-shadow: var(--shadow);
-  /* leaves the map the larger half of the phone — tap the handle to collapse */
-  max-height: 48vh; display: flex; flex-direction: column;
-  transition: max-height .26s cubic-bezier(.3,.9,.3,1);
+  /* leaves the map the larger half of the phone; collapsing hides the list but
+     keeps the handle and category bar, so there's always a big target to reopen */
+  max-height: 50vh; display: flex; flex-direction: column;
 }
-#sheet.collapsed { max-height: 30px; }
+@media (max-height: 700px) { #sheet { max-height: 44vh; } }
 .grab {
-  flex: none; height: 22px; cursor: pointer; position: relative;
-  -webkit-tap-highlight-color: transparent;
+  flex: none; height: 18px; cursor: pointer; position: relative;
+  -webkit-tap-highlight-color: transparent; touch-action: none;
 }
 .grab::before {
-  content: ""; position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
-  width: 36px; height: 4px; border-radius: 2px; background: var(--line);
+  content: ""; position: absolute; top: 7px; left: 50%; transform: translateX(-50%);
+  width: 40px; height: 5px; border-radius: 3px; background: var(--ink-3); opacity: .45;
 }
+.sheet-bar {
+  flex: none; display: flex; align-items: center; gap: 8px;
+  padding: 2px 0 10px;
+}
+.sheet-bar .chips { flex: 1; min-width: 0; gap: 5px; }
+.sheet-bar .chip { padding: 6px 11px; }
+#sheet.collapsed #list { display: none; }
+#sheet.collapsed .sheet-bar { padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
 #list {
   overflow-y: auto; -webkit-overflow-scrolling: touch;
   padding: 0 12px calc(12px + env(safe-area-inset-bottom));
@@ -195,17 +181,23 @@ details:not([open]) summary::after { transform: rotate(-45deg); }
   * { transition: none !important; animation: none !important; }
 }
 
-@media (min-width: 820px) {
+@media (min-width: 820px), (orientation: landscape) and (max-height: 520px) {
   #main { flex-direction: row; }
-  .title { display: flex; align-items: baseline; gap: 12px; }
-  .chips { padding: 0 16px; }
   #sheet {
-    width: 400px; max-height: none; height: 100%;
+    width: min(400px, 46vw); max-height: none; height: 100%;
     border-radius: 0; border-top: none; border-left: 1px solid var(--line);
-    box-shadow: none; padding-top: 6px;
+    box-shadow: none; padding-top: 12px;
   }
-  #sheet.collapsed { max-height: none; }
+  #sheet.collapsed #list { display: block; }
   .grab { display: none; }
+  .sheet-bar { padding-left: 0; }
+}
+/* short landscape phones: title and area chips share one row */
+@media (orientation: landscape) and (max-height: 520px) {
+  header { display: flex; align-items: center; padding-bottom: 8px; }
+  .title { flex: none; padding-bottom: 0; }
+  .title .sub { display: none; }
+  header .chips { flex: 1; min-width: 0; }
 }
 </style>
 </head>
@@ -217,13 +209,15 @@ details:not([open]) summary::after { transform: rotate(-45deg); }
       <div class="sub">__TRIP__</div>
     </div>
     <div class="chips" id="zones" role="group" aria-label="Filter by area"></div>
-    <div class="chips" id="cats" role="group" aria-label="Filter by category"></div>
   </header>
   <div id="main">
     <div id="map"></div>
     <section id="sheet" aria-label="Places">
       <div class="grab" id="grab" role="button" tabindex="0" aria-label="Show or hide the list"
            aria-expanded="true" aria-controls="list"></div>
+      <div class="sheet-bar" id="bar">
+        <div class="chips" id="cats" role="group" aria-label="Filter by category"></div>
+      </div>
       <div id="list"></div>
     </section>
   </div>
@@ -231,26 +225,74 @@ details:not([open]) summary::after { transform: rotate(-45deg); }
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.1.4/leaflet-maplibre-gl.js"></script>
 <script>
 const ZONES = __ZONES__;
 const CATEGORIES = __CATEGORIES__;
 const HOTEL = __HOTEL__;
 const PLACES = __PLACES__;
 
-const dark = matchMedia('(prefers-color-scheme: dark)');
-const zc = z => ZONES[z][dark.matches ? 'dark' : 'light'];
+const zc = z => ZONES[z].light;
 
 const map = L.map('map', { zoomControl: false, attributionControl: true })
   .setView([31.2260, 121.4700], 12);
 L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-// Standard OSM tiles (keyless; CARTO/Esri either stamp "API KEY REQUIRED" or
-// have no labels in China), drained to greyscale by a CSS filter on the tile
-// pane so the map reads as plain white/grey with the labels kept.
-L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  maxZoom: 19,
-  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-}).addTo(map);
+// Basemap: OpenFreeMap vector tiles (free, no key) drawn by MapLibre, recoloured:
+// near-white land, grey roads, blue water, green parks, English labels.
+// The whole page is light-only.
+const PALETTE = {
+  land: '#f7f7f5', water: '#9ccff0', waterText: '#2f6f9e', park: '#c6e8c3',
+  building: '#ecebe7', buildingLine: '#dfddd8',
+  street: '#e6e7ea', streetCase: '#d6d8dc',
+  major: '#d9dce0', majorCase: '#c2c6cc',
+  highway: '#bcc3cd', highwayCase: '#a3acb8',
+  rail: '#cfcfd2', text: '#3c4043', roadText: '#5f6368'
+};
+// English labels only. (name_en and name:latin fall back to the Chinese name for
+// many Shanghai streets.) Features without a real English name get no label.
+const LATIN = ['coalesce', ['get', 'name:en'], ''];
+function googleify(style) {
+  const set = (l, k, v) => { l.paint = l.paint || {}; l.paint[k] = v; };
+  style.layers = style.layers.filter(l =>
+    !/^(natural_earth|landcover_wetland|road_area_pattern|building-3d|road_one_way|highway-shield|road_shield)/.test(l.id));
+  style.layers.forEach(l => {
+    const id = l.id, casing = /casing/.test(id);
+    if (id === 'background') set(l, 'background-color', PALETTE.land);
+    else if (id === 'water') set(l, 'fill-color', PALETTE.water);
+    else if (/^waterway/.test(id) && l.type === 'line') set(l, 'line-color', PALETTE.water);
+    else if (/^(park|landcover_(wood|grass)|landuse_(pitch|track|cemetery))$/.test(id)) {
+      set(l, 'fill-color', PALETTE.park); set(l, 'fill-opacity', 1);
+      if (l.paint['fill-outline-color']) set(l, 'fill-outline-color', PALETTE.park);
+    }
+    else if (id === 'park_outline' || id === 'label_other' || id === 'poi_transit') l.layout = Object.assign(l.layout || {}, { visibility: 'none' });
+    else if (id === 'landuse_residential') set(l, 'fill-color', PALETTE.land);
+    else if (id === 'landuse_school' || id === 'landuse_hospital') set(l, 'fill-color', '#efeee9');
+    else if (id === 'building') { set(l, 'fill-color', PALETTE.building); set(l, 'fill-outline-color', PALETTE.buildingLine); }
+    else if (l.type === 'line' && l['source-layer'] === 'transportation') {
+      if (/rail/.test(id)) set(l, 'line-color', PALETTE.rail);
+      else if (/motorway/.test(id)) set(l, 'line-color', casing ? PALETTE.highwayCase : PALETTE.highway);
+      else if (/trunk_primary/.test(id)) set(l, 'line-color', ['match', ['get', 'class'], 'trunk',
+        casing ? PALETTE.highwayCase : PALETTE.highway, casing ? PALETTE.majorCase : PALETTE.major]);
+      else if (/secondary|tertiary|primary|link/.test(id)) set(l, 'line-color', casing ? PALETTE.majorCase : PALETTE.major);
+      else if (!/path_pedestrian/.test(id)) set(l, 'line-color', casing ? PALETTE.streetCase : PALETTE.street);
+    }
+    else if (l.type === 'symbol' && l.paint) {
+      if (l.layout && /name/.test(JSON.stringify(l.layout['text-field'] || ''))) l.layout['text-field'] = LATIN;
+      const water = /water/.test(id);
+      set(l, 'text-color', water ? PALETTE.waterText : /highway-name/.test(id) ? PALETTE.roadText : PALETTE.text);
+      set(l, 'text-halo-color', water ? 'rgba(255,255,255,.6)' : '#ffffff');
+    }
+  });
+  return style;
+}
+fetch('https://tiles.openfreemap.org/styles/liberty')
+  .then(r => r.json())
+  .then(style => L.maplibreGL({
+    style: googleify(style),
+    attribution: '<a href="https://openfreemap.org" target="_blank">OpenFreeMap</a> &copy; <a href="https://www.openmaptiles.org/" target="_blank">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  }).addTo(map));
 
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const amap = p => 'https://uri.amap.com/search?keyword=' +
@@ -282,13 +324,15 @@ PLACES.forEach(p => {
   markers[p.n] = m;
 });
 
-// The hotel: red map pin, always shown, drawn above the numbered pins.
-L.marker([HOTEL.lat, HOTEL.lng], {
+// The hotel: a red teardrop map pin with a bed icon, always shown, drawn above
+// the numbered pins. The tip of the pin sits on the hotel.
+const hotelMarker = L.marker([HOTEL.lat, HOTEL.lng], {
   icon: L.divIcon({
-    className: '', iconSize: [30, 40], iconAnchor: [15, 39], popupAnchor: [0, -36],
-    html: '<svg class="hotel-pin" width="30" height="40" viewBox="0 0 30 40" aria-hidden="true">' +
-      '<path d="M15 38C15 38 2 24 2 14.5a13 13 0 0 1 26 0C28 24 15 38 15 38z"/>' +
-      '<text x="15" y="19" text-anchor="middle">H</text></svg>'
+    className: '', iconSize: [38, 50], iconAnchor: [19, 49], popupAnchor: [0, -46],
+    html: '<svg class="hotel-pin" width="38" height="50" viewBox="0 0 38 50" aria-hidden="true">' +
+      '<path class="body" d="M19 49C19 49 3 30.5 3 18.5a16 16 0 0 1 32 0C35 30.5 19 49 19 49z"/>' +
+      '<path class="bed" transform="translate(8.2 7.4) scale(0.9)" d="M7 13c1.66 0 3-1.34 3-3S8.66 7 7 7s-3 1.34-3 3 1.34 3 3 3zm12-6h-8v7H3V5H1v15h2v-3h18v3h2v-9c0-2.21-1.79-4-4-4z"/>' +
+      '</svg>'
   }),
   zIndexOffset: 1000, keyboard: false, title: HOTEL.name
 }).bindPopup(popup(HOTEL), { autoPanPadding: [24, 24] }).addTo(map);
@@ -357,27 +401,41 @@ function select(n, fromList) {
     el.classList.toggle('is-active', +el.dataset.n === n));
   const p = PLACES.find(x => x.n === n);
   if (fromList) {
-    if (window.innerWidth < 820) collapse(true);
+    if (!sideBySide.matches) collapse(true);
     map.flyTo([p.lat, p.lng], Math.max(map.getZoom(), 15), { duration: .5 });
     setTimeout(() => markers[n].openPopup(), 380);
   }
 }
 
 /* ---------- sheet ---------- */
+// Same breakpoint as the CSS: map and list side by side, nothing to collapse.
+const sideBySide = matchMedia('(min-width: 820px), (orientation: landscape) and (max-height: 520px)');
+const sheet = document.getElementById('sheet');
+const isCollapsed = () => sheet.classList.contains('collapsed');
 function collapse(on) {
-  const sheet = document.getElementById('sheet');
   sheet.classList.toggle('collapsed', on);
   document.getElementById('grab').setAttribute('aria-expanded', String(!on));
-  setTimeout(() => {
+  requestAnimationFrame(() => {
     map.invalidateSize({ pan: false });
     if (active === null) fit(visible());
-  }, 280);
+  });
 }
 const grab = document.getElementById('grab');
-grab.addEventListener('click', () =>
-  collapse(!document.getElementById('sheet').classList.contains('collapsed')));
+grab.addEventListener('click', () => collapse(!isCollapsed()));
 grab.addEventListener('keydown', e => {
   if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); grab.click(); }
+});
+// Swipe the handle / category bar up to open the list, down to close it.
+let touchY = null;
+['grab', 'bar'].forEach(id => {
+  const el = document.getElementById(id);
+  el.addEventListener('touchstart', e => { touchY = e.touches[0].clientY; }, { passive: true });
+  el.addEventListener('touchend', e => {
+    if (touchY === null) return;
+    const dy = e.changedTouches[0].clientY - touchY;
+    touchY = null;
+    if (Math.abs(dy) > 30) collapse(dy > 0);
+  });
 });
 
 /* ---------- chips ---------- */
@@ -398,11 +456,26 @@ function chipRow(el, options, get, set) {
   });
 }
 chipRow(document.getElementById('zones'),
-  [['all', 'All areas']].concat(Object.entries(ZONES).map(([id, z]) => [id, z.short, zc])),
+  [['all', 'All']].concat(Object.entries(ZONES).map(([id, z]) => [id, z.short, zc])),
   () => zone, v => { zone = v; });
+// Legend entry for the hotel: not a filter, it jumps to the hotel pin.
+(() => {
+  const b = document.createElement('button');
+  b.className = 'chip hotel';
+  b.type = 'button';
+  b.innerHTML = '<svg viewBox="0 0 38 50" aria-hidden="true"><path fill="var(--hotel)" ' +
+    'd="M19 49C19 49 3 30.5 3 18.5a16 16 0 0 1 32 0C35 30.5 19 49 19 49z"/><circle cx="19" cy="18" r="6" fill="#fff"/></svg>' +
+    'Hotel: ' + esc(HOTEL.name.replace(/ Shanghai$/, ''));
+  b.addEventListener('click', () => {
+    if (!sideBySide.matches) collapse(true);
+    map.flyTo([HOTEL.lat, HOTEL.lng], Math.max(map.getZoom(), 15), { duration: .5 });
+    setTimeout(() => hotelMarker.openPopup(), 380);
+  });
+  document.getElementById('zones').appendChild(b);
+})();
 chipRow(document.getElementById('cats'),
   [['all', 'All']].concat(Object.entries(CATEGORIES).map(([id, name]) => [id, name])),
-  () => cat, v => { cat = v; });
+  () => cat, v => { cat = v; if (isCollapsed()) collapse(false); });
 
 render();
 
@@ -413,7 +486,6 @@ const resettle = () => {
 window.addEventListener('load', resettle);
 window.addEventListener('resize', resettle);
 window.addEventListener('orientationchange', () => setTimeout(resettle, 260));
-dark.addEventListener('change', () => location.reload());
 
 window.__map = map;  // debug handle
 </script>

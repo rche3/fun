@@ -7,7 +7,7 @@ tap through to a maps app before you walk somewhere.
 Descriptions stay short and close to the wording in recc.md.
 """
 
-TRIP = "27 September 2026 trip"
+TRIP = "September 2026 Trip"
 
 # Zone id -> display config. Blue / green / yellow; the hotel pin is red.
 # Yellow is too light for white text, so each zone also sets its pin text colour.
@@ -16,21 +16,18 @@ ZONES = {
         "name": "Wukang Rd / French Concession",
         "short": "French Concession",
         "light": "#2a78d6",
-        "dark": "#3f8ae8",
         "text": "#fff",
     },
     "bund": {
         "name": "The Bund / Lujiazui",
         "short": "Bund / Lujiazui",
         "light": "#2e9a4e",
-        "dark": "#3aa95c",
         "text": "#fff",
     },
     "jingan": {
         "name": "Jing'an Temple",
         "short": "Jing'an",
         "light": "#f2b90f",
-        "dark": "#f2bf2a",
         "text": "#231d05",
     },
 }
