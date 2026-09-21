@@ -1,7 +1,8 @@
 // Touch-driven usability test: iPhone 17 Pro Max portrait + landscape, iPhone SE, desktop.
 // Serve the site first (PORT=8077 python3 server.py), then: node tools/ux-test.mjs [out-dir]
+// Test the live site instead with SITE=https://shanghai.up.railway.app/
 import { open, sleep } from './cdp.mjs';
-const SITE = 'http://localhost:8077/', D = (process.argv[2] || '/tmp/shanghai-ux') + '/';
+const SITE = process.env.SITE || 'http://localhost:8077/', D = (process.argv[2] || '/tmp/shanghai-ux') + '/';
 import('node:fs').then(fs => fs.mkdirSync(D, { recursive: true }));
 const p = await open();
 const log = (...a) => console.log(...a);
